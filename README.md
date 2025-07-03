@@ -51,7 +51,7 @@ npm install
 node index.js
 ```
 
-🔧 Usage
+## 🔧 Usage
 Adding Phone Numbers
 ```bash
 # Add single number
