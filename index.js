@@ -1,7 +1,7 @@
 const fs = require('fs');
 const qrcode = require('qrcode-terminal');
 const QRCode = require('qrcode');
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const express = require('express');
 const bodyParser = require('body-parser');
 
@@ -31,6 +31,42 @@ client.on('ready', () => {
     console.log('WhatsApp Client is ready!');
     isClientReady = true;
     qrCodeData = null; // Clear QR code when ready
+});
+
+// API to send media message
+app.post('/send-media', async (req, res) => {
+    const { filePath, caption } = req.body;
+    
+    if (!filePath) return res.status(400).send("File path is required.");
+    if (phoneNumbers.length === 0) return res.status(400).send("No numbers added.");
+
+    try {
+        const media = MessageMedia.fromFilePath(filePath);
+        
+        for (let i = 0; i < phoneNumbers.length; i++) {
+            const number = phoneNumbers[i];
+            const chatId = `${number}@c.us`;
+
+            const isRegistered = await client.isRegisteredUser(chatId);
+            if (!isRegistered) {
+                console.log(`Number ${number} is not registered on WhatsApp.`);
+                continue;
+            }
+
+            await client.sendMessage(chatId, media, { caption: caption || '' });
+            console.log(`Media sent to ${number}`);
+            res.send(`Media sent to ${number}`);
+            
+            if (i < phoneNumbers.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+        }
+
+        res.send("Media sent to all numbers.");
+    } catch (error) {
+        console.error('Error sending media:', error);
+        res.status(500).send("Failed to send media.");
+    }
 });
 
 // API to add number
