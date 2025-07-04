@@ -22,6 +22,7 @@
 - `POST /add-number` - Add single or multiple phone numbers  
 - `POST /set-message` - Set the message to be sent  
 - `POST /send-all` - Send message to all added numbers  
+- `POST /send-media` - Send media message to all added numbers  
 
 ---
 
@@ -74,6 +75,11 @@ Sending Messages
 ```bash
 curl -X POST http://localhost:3000/send-all
 ```
+Sending Media Messages
+```bash
+curl -X POST http://localhost:3000/send-media
+```
+
 Getting QR Code
 ```bash
 curl http://localhost:3000/qr-code

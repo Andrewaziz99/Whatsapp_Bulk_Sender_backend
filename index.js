@@ -39,33 +39,52 @@ app.post('/send-media', async (req, res) => {
     
     if (!filePath) return res.status(400).send("File path is required.");
     if (phoneNumbers.length === 0) return res.status(400).send("No numbers added.");
+    if (!isClientReady) return res.status(400).send("WhatsApp client is not ready.");
 
     try {
+        // Check if file exists
+        if (!fs.existsSync(filePath)) {
+            return res.status(400).send("File not found at the specified path.");
+        }
+
+        console.log(`Creating media from file: ${filePath}`);
         const media = MessageMedia.fromFilePath(filePath);
+        console.log(`Media created successfully. MIME type: ${media.mimetype}`);
         
+        let successCount = 0;
+        let failCount = 0;
+
         for (let i = 0; i < phoneNumbers.length; i++) {
             const number = phoneNumbers[i];
-            const chatId = `${number}@c.us`;
+            const cleaned = number.replace(/\D/g, '');
+            const chatId = `${cleaned}@c.us`;
 
-            const isRegistered = await client.isRegisteredUser(chatId);
-            if (!isRegistered) {
-                console.log(`Number ${number} is not registered on WhatsApp.`);
-                continue;
-            }
-
-            await client.sendMessage(chatId, media, { caption: caption || '' });
-            console.log(`Media sent to ${number}`);
-            res.send(`Media sent to ${number}`);
-            
-            if (i < phoneNumbers.length - 1) {
-                await new Promise(resolve => setTimeout(resolve, 2000));
+            try {
+                const isRegistered = await client.isRegisteredUser(chatId);
+                if (!isRegistered) {
+                    console.log(`Number ${number} is not registered on WhatsApp.`);
+                    failCount++;
+                    continue;
+                }
+ 
+                await client.sendMessage(chatId, media, { caption: caption || '' });
+                console.log(`Media sent to ${number}`);
+                successCount++;
+                
+                // Add 2-second delay between messages (except for the last message)
+                if (i < phoneNumbers.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            } catch (sendError) {
+                console.error(`Failed to send media to ${number}:`, sendError.message);
+                failCount++;
             }
         }
 
-        res.send("Media sent to all numbers.");
+        res.send(`Media sending completed. Success: ${successCount}, Failed: ${failCount}`);
     } catch (error) {
-        console.error('Error sending media:', error);
-        res.status(500).send("Failed to send media.");
+        console.error('Error in send-media endpoint:', error);
+        res.status(500).send(`Failed to send media: ${error.message}`);
     }
 });
 
